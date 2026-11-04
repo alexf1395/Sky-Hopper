@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071c31">
+  <meta name="description" content="Sky Hopper : un mini-jeu d'arcade gratuit. Touchez l'écran ou appuyez sur Espace pour voler entre les obstacles.">
+  <title>Sky Hopper — Mini-jeu d'arcade</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --cream:#fffbea; --ink:#071e36; }
+    * { box-sizing: border-box; }
+    html,body { margin:0; min-height:100%; }
+    body { background:radial-gradient(ellipse 65% 70% at 50% 15%, #1b526b 0%, #0e2b43 40%, #07192c 85%); color:#e9f4fc; display:flex; align-items:center; justify-content:center; min-height:100svh; }
+    button { font:inherit; cursor:pointer; }
+    button:focus-visible, .playfield:focus-visible { outline:3px solid #fff1a0; outline-offset:3px; }
+    .layout { width:100%; max-width:520px; padding:22px 18px 28px; display:flex; flex-direction:column; align-items:center; gap:13px; }
+    .masthead { width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .brand { display:flex; align-items:center; gap:10px; min-width:0; }
+    .brand-icon { background:#ffbd4b; color:#13394d; border:2px solid #ffd88a; border-radius:13px; width:39px; height:39px; display:grid; place-items:center; box-shadow:0 4px 0 #af692f; font-size:22px; font-weight:900; }
+    .brand span { font-size:21px; font-weight:950; letter-spacing:-.06em; white-space:nowrap; }
+    .brand small { display:block; text-transform:uppercase; letter-spacing:.16em; color:#88b9cf; font-size:9px; font-weight:800; margin-top:-3px; }
+    .toolbar { display:flex; gap:7px; }
+    .icon-btn { background:#16384c; color:#e9f5fa; border:1px solid #2c6173; border-radius:12px; height:38px; min-width:39px; padding:0 10px; font-size:17px; display:grid; place-items:center; }
+    .icon-btn:hover { background:#215169; }
+    .icon-btn[disabled] { opacity:.45; cursor:not-allowed; }
+    .frame { width:min(100%, 440px, calc((100svh - 160px) * 420 / 740)); min-width:0; position:relative; border:5px solid #102c42; border-radius:24px; box-shadow:0 24px 65px #0008,0 0 0 1px #58b1c43d,inset 0 0 0 2px #ffffff11; overflow:hidden; background:#69cbea; touch-action:manipulation; }
+    .playfield { width:100%; aspect-ratio:420/740; display:block; cursor:pointer; touch-action:manipulation; position:relative; }
+    canvas { display:block; width:100%; height:100%; }
+    .hud { position:absolute; z-index:2; top:21px; left:0; right:0; display:flex; align-items:flex-start; justify-content:space-between; padding:0 20px; pointer-events:none; color:#fff; text-shadow:0 3px 0 #234d65,0 0 9px #12516c70; }
+    .score { font-size:48px; font-weight:1000; line-height:1; letter-spacing:-.07em; min-width:60px; text-align:center; position:absolute; left:50%; transform:translateX(-50%); }
+    .high { border-radius:14px; background:#0b435f79; padding:8px 11px; font-size:11px; font-weight:800; letter-spacing:.03em; }
+    .high strong { display:block; font-size:20px; line-height:1.2; }
+    .center-ui { pointer-events:none; position:absolute; z-index:4; inset:0; display:flex; align-items:center; justify-content:center; padding:22px; }
+    .center-ui[hidden] { display:none; }
+    .card { pointer-events:auto; width:100%; max-width:310px; background:#fff8e7; border:4px solid #132f43; border-radius:25px; box-shadow:0 9px 0 #19374b,0 18px 32px #174a5c60; color:#142d3d; text-align:center; padding:24px 18px 21px; transform:translateY(-8px); }
+    .eyebrow { display:inline-block; padding:6px 10px; background:#d9f5ec; border-radius:100px; color:#2b6c74; font-size:10px; font-weight:900; letter-spacing:.13em; }
+    .card h1,.card h2 { font-size:36px; line-height:1.03; letter-spacing:-.07em; margin:12px 0 10px; font-weight:1000; }
+    .card p { font-size:14px; line-height:1.6; color:#5a6570; margin:0 0 18px; }
+    .primary { background:#ffbb4b; border:3px solid #17374a; border-radius:13px; box-shadow:0 5px 0 #c17b27; color:#1e3644; font-weight:1000; font-size:16px; padding:14px 18px; width:100%; transition:transform .09s,box-shadow .09s; }
+    .primary:hover { background:#ffd06e; }
+    .primary:active { transform:translateY(4px); box-shadow:0 1px 0 #c17b27; }
+    .medals { display:flex; gap:9px; justify-content:center; margin:8px 0 20px; }
+    .medal { width:104px; background:#e5efea; border:2px solid #c7deda; border-radius:13px; padding:11px 8px; }
+    .medal small { font-size:10px; color:#668085; font-weight:800; letter-spacing:.08em; }
+    .medal strong { display:block; font-size:27px; margin-top:1px; }
+    .hint { display:flex; justify-content:center; gap:13px; color:#accddb; font-size:12px; text-align:center; }
+    .hint kbd { background:#1c465d; border:1px solid #437389; border-radius:5px; padding:2px 5px; font:inherit; }
+    .status { min-height:16px; color:#9ac2d4; font-size:11px; text-align:center; }
+    @media(max-width:480px){ .layout {padding:12px 12px 18px;gap:10px;} .frame {width:min(100%, calc((100svh - 134px) * 420 / 740));} .brand span{font-size:19px;} .hint{font-size:11px;} }
+    @media(max-height:650px){ .layout {gap:6px;padding:6px 8px;} .brand-icon{width:31px;height:31px;} .icon-btn{height:31px;min-width:32px;} .frame{width:min(100%, calc((100svh - 104px) * 420 / 740));} .hint {font-size:10px;} }
+  </style>
+</head>
+<body>
+  <main class="layout">
+    <header class="masthead">
+      <div class="brand"><div class="brand-icon" aria-hidden="true">↗</div><div><span>SKY HOPPER</span><small>Édition head-bird</small></div></div>
+      <div class="toolbar">
+        <button id="sound" class="icon-btn" aria-label="Activer le son" title="Activer ou désactiver le son" aria-pressed="false">♪̸</button>
+        <button id="pause" class="icon-btn" aria-label="Mettre en pause" title="Pause" disabled>Ⅱ</button>
+      </div>
+    </header>
+    <section class="frame" aria-label="Jeu Sky Hopper">
+      <div class="playfield" id="playfield" role="button" tabindex="0" aria-label="Battre des ailes : toucher ou appuyer sur Espace">
+        <canvas id="game" width="420" height="740" aria-hidden="true"></canvas>
+      </div>
+      <div class="hud"><div class="high">RECORD <strong id="best">0</strong></div><div id="score" class="score" aria-live="off">0</div></div>
+      <div id="startOverlay" class="center-ui">
+        <div class="card">
+          <span class="eyebrow">PRÊT À DÉCOLLER ?</span>
+          <h1>Un saut.<br>À la fois.</h1>
+          <p>Ta tête transformée en bird. Évite les obstacles et enchaîne les passages.</p>
+          <button id="startBtn" class="primary">JOUER →</button>
+        </div>
+      </div>
+      <div id="gameOverOverlay" class="center-ui" hidden>
+        <div class="card">
+          <span class="eyebrow" id="resultTitle">PARTIE TERMINÉE</span>
+          <h2>Bien tenté !</h2>
+          <div class="medals"><div class="medal"><small>SCORE</small><strong id="finalScore">0</strong></div><div class="medal"><small>RECORD</small><strong id="finalBest">0</strong></div></div>
+          <button id="againBtn" class="primary">REJOUER →</button>
+        </div>
+      </div>
+      <div id="pauseOverlay" class="center-ui" hidden>
+        <div class="card"><span class="eyebrow">PETITE PAUSE</span><h2>En suspens.</h2><p>Reprends quand tu veux.</p><button id="resumeBtn" class="primary">REPRENDRE →</button></div>
+      </div>
+    </section>
+    <div class="hint"><span>☝ Toucher pour voler</span><span><kbd>Espace</kbd> ou <kbd>↑</kbd></span><span><kbd>P</kbd> pause</span></div>
+    <div class="status" id="status" aria-live="polite">Prêt à jouer</div>
+  </main>
+<script>
+(() => {
+  'use strict';
+  const W=420, H=740, FLOOR=660, BIRD_X=118, R=24, PIPE_W=72, BIRD_W=112, BIRD_H=104;
+  const canvas=document.getElementById('game'), ctx=canvas.getContext('2d');
+  const field=document.getElementById('playfield');
+  const els={score:document.getElementById('score'),best:document.getElementById('best'),
+    start:document.getElementById('startOverlay'),over:document.getElementById('gameOverOverlay'),pause:document.getElementById('pauseOverlay'),
+    endScore:document.getElementById('finalScore'),endBest:document.getElementById('finalBest'),result:document.getElementById('resultTitle'),
+    sound:document.getElementById('sound'),pauseBtn:document.getElementById('pause'),status:document.getElementById('status')};
+  let state='ready', previous='playing', y=310, vy=0, score=0, best=0, tubes=[], spawnTimer=0, worldTime=0, lastTime=0, muted=true, audio=null, birdReady=false;
+  let lastGapY=314;
+
+  const birdSprite = new Image();
+  birdSprite.src = 'head-bird.webp';
+  birdSprite.addEventListener('load', ()=>{ birdReady = true; draw(); });
+  birdSprite.addEventListener('error', ()=>{ birdReady = false; });
+  try {best=Number(localStorage.getItem('sky-hopper-best-v1')) || 0;} catch (_) { /* private browsing may disable storage */ }
+  els.best.textContent=String(best);
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+  function resize(){const rect=canvas.getBoundingClientRect();const dpr=Math.min(window.devicePixelRatio||1,3);canvas.width=Math.max(1,Math.round(rect.width*dpr));canvas.height=Math.max(1,Math.round(rect.height*dpr));ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);draw();}
+  function tone(freq,duration=0.09,kind='sine',volume=.045){
+    if(muted) return;
+    try{audio ||= new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended') audio.resume();
+      const oscillator=audio.createOscillator(), gain=audio.createGain(), t=audio.currentTime;
+      oscillator.type=kind;oscillator.frequency.setValueAtTime(freq,t);oscillator.frequency.exponentialRampToValueAtTime(freq*.75,t+duration);
+      gain.gain.setValueAtTime(volume,t);gain.gain.exponentialRampToValueAtTime(.001,t+duration);
+      oscillator.connect(gain);gain.connect(audio.destination);oscillator.start(t);oscillator.stop(t+duration);
+    }catch(_){muted=true;els.sound.setAttribute('aria-pressed','false');els.sound.textContent='♪̸';}
+  }
+  function hud(){els.score.textContent=String(score);els.best.textContent=String(best);}
+  function overlays(){els.start.hidden=state!=='ready';els.over.hidden=state!=='over';els.pause.hidden=state!=='paused';els.pauseBtn.disabled=(state==='ready'||state==='over');els.pauseBtn.textContent=state==='paused'?'▶':'Ⅱ';els.pauseBtn.setAttribute('aria-label',state==='paused'?'Reprendre':'Mettre en pause');}
+  function reset(){y=310;vy=0;score=0;worldTime=0;spawnTimer=.80;tubes=[];lastGapY=315;hud();}
+  function begin(){reset();state='playing';overlays();els.status.textContent='Partie en cours';flap();lastTime=performance.now();}
+  function flap(){vy=-360;tone(610,.075,'triangle',.03);}
+  function doAction(){if(state==='ready'||state==='over'){begin();} else if(state==='playing'){flap();}}
+  function stop(){if(state!=='playing')return;state='over';tone(160,.24,'sawtooth',.022);if(score>best){best=score;try{localStorage.setItem('sky-hopper-best-v1',String(best));}catch(_){}els.result.textContent='NOUVEAU RECORD !';}else els.result.textContent='PARTIE TERMINÉE';hud();els.endScore.textContent=String(score);els.endBest.textContent=String(best);els.status.textContent='Partie terminée. Score '+score;overlays();}
+  function togglePause(){if(state==='playing'){state='paused';els.status.textContent='Jeu en pause';}else if(state==='paused'){state='playing';lastTime=performance.now();els.status.textContent='Partie en cours';}overlays();}
+  function newPipe(){const target=clamp(lastGapY+rand(-118,118),185,480);lastGapY=target;const gap=clamp(216-score*1.7,170,216);tubes.push({x:W+20,gapY:target,gap,passed:false});}
+  function update(dt){if(state==='ready'){worldTime+=dt*.4;return;}if(state!=='playing')return;
+    worldTime+=dt;vy+=1110*dt;vy=Math.min(620,vy);y+=vy*dt;
+    const speed=Math.min(235,166+score*3.5);spawnTimer-=dt;
+    if(spawnTimer<=0){newPipe();spawnTimer+=Math.max(1.24,1.55-score*.006);}
+    for(const pipe of tubes){pipe.x-=speed*dt;
+      if(!pipe.passed && pipe.x+PIPE_W<BIRD_X-R){pipe.passed=true;score++;hud();tone(840,.12,'sine',.045);}
+      const left=pipe.x, right=pipe.x+PIPE_W, top=pipe.gapY-pipe.gap/2, bottom=pipe.gapY+pipe.gap/2;
+      const closestX=clamp(BIRD_X,left,right),closestTop=clamp(y,0,top),closestBottom=clamp(y,bottom,FLOOR);
+      if((BIRD_X-closestX)**2+(y-closestTop)**2<(R-3)**2 || (BIRD_X-closestX)**2+(y-closestBottom)**2<(R-3)**2){stop();return;}
+    }
+    tubes=tubes.filter(pipe=>pipe.x+PIPE_W>-4);
+    if(y-R<=2 || y+R>=FLOOR){y=clamp(y,R,FLOOR-R);stop();}
+  }
+  function roundedRect(x,y,w,h,r,fill,stroke,strokeWidth=1){if(h<=0||w<=0)return;ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=strokeWidth;ctx.stroke();}}
+  function cloud(x,y,scale=.8,opacity=.6){ctx.save();ctx.globalAlpha=opacity;ctx.fillStyle='#fffbea';ctx.beginPath();ctx.ellipse(x,y,38*scale,13*scale,0,0,Math.PI*2);ctx.ellipse(x-16*scale,y-8*scale,19*scale,14*scale,0,0,Math.PI*2);ctx.ellipse(x+6*scale,y-16*scale,24*scale,19*scale,0,0,Math.PI*2);ctx.ellipse(x+27*scale,y-7*scale,18*scale,15*scale,0,0,Math.PI*2);ctx.fill();ctx.restore();}
+  function pipe(x,top,height,isUpper){if(height<1)return;
+    const edge='#1f6d57';roundedRect(x+4,top,PIPE_W-8,height,6,'#2cba7d',edge,4);
+    roundedRect(x+13,top+2,12,Math.max(0,height-4),5,'#7ce2a0');
+    roundedRect(x+45,top+2,12,Math.max(0,height-4),4,'#239367');
+    const capH=26,capY=isUpper?top+height-capH:top;
+    roundedRect(x-7,capY,PIPE_W+14,capH,6,'#37c989',edge,4);
+    roundedRect(x+1,capY+4,12,capH-8,4,'#8be9aa');
+    roundedRect(x+51,capY+4,15,capH-8,4,'#1ba873');
+  }
+  function bird(){ctx.save();ctx.translate(BIRD_X,y);ctx.rotate(clamp(vy/900,-.32,.68));
+    if(birdReady){
+      const bob = Math.sin(worldTime*10)*1.5;
+      ctx.drawImage(birdSprite, -BIRD_W/2, -BIRD_H/2 + bob, BIRD_W, BIRD_H);
+    } else {
+      ctx.fillStyle='#d17a2c';ctx.beginPath();ctx.ellipse(0,3,19,17,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ffc447';ctx.beginPath();ctx.ellipse(-1,0,18,17,-.12,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ffe59b';ctx.beginPath();ctx.ellipse(-7,8,12,8,-.4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ee992e';ctx.beginPath();ctx.ellipse(-9,3+Math.sin(worldTime*24)*2.8,10,6,-.32,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(7,-6,7.5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#193348';ctx.beginPath();ctx.arc(10,-5,3.3,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ff862f';ctx.beginPath();ctx.moveTo(13,3);ctx.lineTo(29,8);ctx.lineTo(14,13);ctx.closePath();ctx.fill();
+      ctx.strokeStyle='#91552a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-11,-16);ctx.lineTo(-9,-22);ctx.lineTo(-4,-18);ctx.stroke();
+    }
+    ctx.restore();}
+  function draw(){ctx.clearRect(0,0,W,H);
+    const sky=ctx.createLinearGradient(0,0,0,FLOOR);sky.addColorStop(0,'#5ec2e8');sky.addColorStop(.66,'#a9e6e7');sky.addColorStop(1,'#d7efc4');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#fff2c2';ctx.beginPath();ctx.arc(350,116,46,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffdf8d';ctx.beginPath();ctx.arc(350,116,36,0,Math.PI*2);ctx.fill();
+    const parallax=(worldTime*13)%510;cloud(95-parallax*.38,150,.9,.74);cloud(370-parallax*.23,250,.66,.56);cloud(520-parallax*.56,105,.76,.66);
+    ctx.fillStyle='#7bd6ad';ctx.beginPath();ctx.moveTo(0,FLOOR);for(let x=-20;x<=W+30;x+=12){ctx.lineTo(x,549+Math.sin((x+worldTime*9)*.013)*11+Math.cos(x*.024)*17);}ctx.lineTo(W,FLOOR);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#4db994';ctx.beginPath();ctx.moveTo(0,FLOOR);for(let x=-20;x<=W+30;x+=12){ctx.lineTo(x,594+Math.sin((x+worldTime*18)*.021)*13+Math.cos(x*.041)*9);}ctx.lineTo(W,FLOOR);ctx.closePath();ctx.fill();
+    for(const t of tubes){const top=t.gapY-t.gap/2,bottom=t.gapY+t.gap/2;pipe(t.x,0,top,true);pipe(t.x,bottom,FLOOR-bottom,false);}
+    bird();
+    ctx.fillStyle='#346c43';ctx.fillRect(0,FLOOR,W,5);ctx.fillStyle='#ecc77e';ctx.fillRect(0,FLOOR+5,W,H-FLOOR-5);
+    ctx.fillStyle='#e1b36a';for(let i=0;i<19;i++){let x=(i*29-worldTime*48%29+29)%W;roundedRect(x,FLOOR+22+(i%2)*23,17,5,2,'#d29f59');}
+    ctx.fillStyle='#88c76a';ctx.fillRect(0,FLOOR+5,W,9);
+  }
+  function loop(now){const dt=Math.min((now-lastTime)/1000||0,.032);lastTime=now;update(dt);draw();requestAnimationFrame(loop);}
+  document.getElementById('startBtn').addEventListener('click',begin);
+  document.getElementById('againBtn').addEventListener('click',begin);
+  document.getElementById('resumeBtn').addEventListener('click',togglePause);
+  field.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();doAction();});
+  field.addEventListener('keydown',e=>{if([' ','ArrowUp','Enter'].includes(e.key)){e.preventDefault();doAction();}});
+  document.addEventListener('keydown',e=>{if(e.repeat)return;if(['Space','ArrowUp','KeyW'].includes(e.code) && document.activeElement!==field && document.activeElement?.tagName!=='BUTTON'){e.preventDefault();doAction();}else if(e.code==='KeyP'){e.preventDefault();togglePause();}});
+  els.pauseBtn.addEventListener('click',togglePause);
+  els.sound.addEventListener('click',()=>{muted=!muted;els.sound.textContent=muted?'♪̸':'♫';els.sound.setAttribute('aria-pressed',String(!muted));els.sound.setAttribute('aria-label',muted?'Activer le son':'Couper le son');if(!muted)tone(700);});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden && state==='playing')togglePause();});
+  window.addEventListener('resize',resize);
+  if(window.ResizeObserver)new ResizeObserver(resize).observe(canvas);
+  overlays();resize();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
